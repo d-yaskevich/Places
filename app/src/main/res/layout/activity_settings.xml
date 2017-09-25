@@ -14,7 +14,8 @@
                  android:id="@+id/settingsContent"
                  android:layout_width="match_parent"
                  android:layout_height="match_parent"
-                 android:layout_below="@+id/toolbarSettings"/>
+                 android:layout_below="@+id/toolbarSettings"
+        android:theme="@style/MyTheme"/>
 </RelativeLayout>
 
 

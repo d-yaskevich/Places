@@ -27,7 +27,8 @@
             android:contentDescription=""
             android:layout_margin="3dp"
             android:gravity="center"
-            app:srcCompat="@drawable/ic_nature_people_96px"/>
+            app:srcCompat="@drawable/ic_nature_people_96px"
+            android:onClick=""/>
 
         <ImageView
             android:id="@+id/imageView2"

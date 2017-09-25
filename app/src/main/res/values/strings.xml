@@ -13,8 +13,8 @@
     <string name="permission_rationale">Location permission is needed for core functionality</string>
     <string name="permission_denied_explanation">Permission was denied, but is needed for core
         functionality.</string>
-    <string name="location_off_mode">The device location can not be determined.
-        Check the location mode</string>
+    <string name="location_off_mode">"The device location can't be determined.
+        Check the location mode"</string>
     <string name="settings">Settings</string>
     <!---->
 
@@ -28,19 +28,17 @@
     <string name="summary_radius">Select the maximum radius value</string>
 
     <string-array name="listArray">
-        <item>500 m</item>
+        <item>1 km</item>
         <item>5 km</item>
         <item>10 km</item>
         <item>50 km</item>
-        <item>100 km</item>
     </string-array>
 
     <string-array name="listValues">
-        <item>500</item>
+        <item>1000</item>
         <item>5000</item>
         <item>10000</item>
         <item>50000</item>
-        <item>100000</item>
     </string-array>
 
     <string name="title_other_settings">Other settings</string>

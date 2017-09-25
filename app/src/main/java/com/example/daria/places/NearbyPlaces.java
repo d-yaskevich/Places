@@ -17,7 +17,7 @@ import static android.util.Log.d;
 
 public class NearbyPlaces extends AppCompatActivity {
 
-    private static final String TAG = NearbyPlaces.class.getSimpleName();
+    private static final String TAG = "MyAwesomeApp #PHOTO";
 
     SharedPreferences mSettings;
 
