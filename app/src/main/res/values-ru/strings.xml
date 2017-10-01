@@ -1,0 +1,44 @@
+<resources>
+    <string name="app_name">Места</string>
+    <string name="action_bar_title">Места поблизости</string>
+    <string name="google_maps_key">AIzaSyCbkaGIrcv292nKS1cN1Z-FV9pZBkLHOZ8</string>
+    <string name="of">из</string>
+
+    <!--LOCATION-->
+    <string name="no_location_detected">
+        Включите GPS, чтобы найти текущее местоположение. Нажмите «ВКЛ», чтобы перейти к настройкам служб определения местоположения.
+    </string>
+    <string name="on">ВКЛ</string>
+    <!---->
+
+    <!--PERMISSION-->
+    <string name="permission_rationale">Для основных функций требуется разрешение на определение местоположения.</string>
+    <string name="permission_denied_explanation">Разрешение было отклонено. Оно необходимо для полной функциональности приложения.</string>
+    <string name="location_off_mode">Местоположение устройства не может быть определено. Проверьте настройкам служб определения местоположения.</string>
+    <string name="settings">Настройки</string>
+    <!---->
+
+    <!--SETTING-->
+    <string name="title_settings">Настройки</string>
+
+    <string name="title_category_radius">Радиус</string>
+    <string name="title_radius">Радиус поиска</string>
+    <string name="summary_radius">Выберите максимальный радиус поиска</string>
+
+    <string-array name="listArray">
+        <item>1 км</item>
+        <item>5 км</item>
+        <item>10 км</item>
+        <item>50 км</item>
+    </string-array>
+
+    <string-array name="listValues">
+        <item>1000</item>
+        <item>5000</item>
+        <item>10000</item>
+        <item>50000</item>
+    </string-array>
+
+    <string name="title_other_settings">Другие настройки</string>
+    <!--  -->
+</resources>

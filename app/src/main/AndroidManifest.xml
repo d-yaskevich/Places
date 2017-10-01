@@ -52,6 +52,12 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value=".NearbyPlaces"/>
         </activity>
+        <activity android:name=".PagerActivity"
+                  android:theme="@style/MyTheme">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".NearbyPlaces"/>
+        </activity>
     </application>
 
 </manifest>

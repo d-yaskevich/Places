@@ -2,8 +2,10 @@ package com.example.daria.places;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.content.IntentSender;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.net.Uri;
@@ -47,7 +49,6 @@ public class MainActivity extends AppCompatActivity
         GoogleApiClient.OnConnectionFailedListener {
 
     private static final String TAG = "MyAwesomeApp (: ";
-    String str;
 
     //Constant used in requesting runtime permissions.
     private static final int REQUEST_CODE_ACCESS_FINE_LOCATION = 1;
@@ -78,11 +79,18 @@ public class MainActivity extends AppCompatActivity
     private LocationCallback mLocationCallback;
 
     //Keys for storing activity state in the Bundle.
-    private static final String KEY_CAMERA_POSITION = "camera_position";
     private static final String KEY_LAST_LOCATION = "last_location";
     private static final String KEY_CURRENT_LOCATION = "current_location";
     private static final String KEY_LOCATION_PERMISSION = "location_permission";
     private static final String KEY_LOCATION_RESOLUTION = "location_resolution";
+
+    // Setting file name
+    public static final String APP_PREFERENCES = "location_settings";
+    // Keys in setting file
+    public static final String APP_PREFERENCES_LAT = "lat";
+    public static final String APP_PREFERENCES_LNG = "lng";
+
+    private SharedPreferences mSettings;
 
     private GoogleMap mMap;
     private GoogleApiClient mGoogleApiClient;
@@ -94,7 +102,7 @@ public class MainActivity extends AppCompatActivity
     private final LatLng mDefaultLocation = new LatLng(53.902301, 27.561903);
 
     private CameraPosition mCameraPosition;
-    private static final int DEFAULT_ZOOM = 15;
+    private static final int DEFAULT_ZOOM = 10;
 
     //Fab button for switching to child activity
     FloatingActionButton fab;
@@ -106,19 +114,12 @@ public class MainActivity extends AppCompatActivity
         getSupportActionBar().hide();
 
         setContentView(R.layout.action_button);
+
+        //add fab button
         fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent intent = new Intent(MainActivity.this, NearbyPlaces.class);
-                intent.putExtra("lat", mCurrentLocation.getLatitude());
-                intent.putExtra("lng", mCurrentLocation.getLongitude());
-                //intent.putExtra("lat", 0);
-                //intent.putExtra("lng", 0);
-                setResult(RESULT_OK, intent);
-                startActivity(intent);
-            }
-        });
+        fab.hide();
+
+        mSettings = getSharedPreferences(APP_PREFERENCES, Context.MODE_PRIVATE);
 
         // Update values using data stored in the Bundle.
         updateValuesFromBundle(savedInstanceState);
@@ -139,13 +140,25 @@ public class MainActivity extends AppCompatActivity
                 .build();
     }
 
+    public void onFabButton(View v) {
+        Intent intent = new Intent(MainActivity.this, NearbyPlaces.class);
+        if(mCurrentLocation != null){
+            intent.putExtra("lat", mCurrentLocation.getLatitude());
+            intent.putExtra("lng", mCurrentLocation.getLongitude());
+        } else {
+            intent.putExtra("lat", 0);
+            intent.putExtra("lng", 0);
+        }
+        setResult(RESULT_OK, intent);
+        startActivity(intent);
+    }
+
     /**
      * Updates fields based on data stored in the bundle.
      */
     private void updateValuesFromBundle(Bundle savedInstanceState) {
         if (savedInstanceState != null) {
             Log.i(TAG, "Restart app. Return of camera position and location.");
-            str="updateValuesFromBundle()";
             // Update the value of mCurrentLocation, mLastKnowLocation, mCameraPosition
             // and mLocationPermissionGranted from the Bundle
             if (savedInstanceState.keySet().contains(KEY_CURRENT_LOCATION)) {
@@ -156,9 +169,6 @@ public class MainActivity extends AppCompatActivity
             if (savedInstanceState.keySet().contains(KEY_LAST_LOCATION)) {
                 mLastKnowLocation = savedInstanceState.getParcelable(KEY_LAST_LOCATION);
             }
-            if (savedInstanceState.keySet().contains(KEY_CAMERA_POSITION)) {
-                mCameraPosition = savedInstanceState.getParcelable(KEY_CAMERA_POSITION);
-            }
             if (savedInstanceState.keySet().contains(KEY_LOCATION_PERMISSION)){
                 mLocationPermissionGranted = savedInstanceState.getBoolean(KEY_LOCATION_PERMISSION);
             }
@@ -166,6 +176,7 @@ public class MainActivity extends AppCompatActivity
                 mLocationResolutionDenied = savedInstanceState.getBoolean(KEY_LOCATION_RESOLUTION);
             }
         }
+        getDataFromSettings();
     }
 
     /**
@@ -177,7 +188,6 @@ public class MainActivity extends AppCompatActivity
             @Override
             public void onLocationResult(LocationResult locationResult) {
                 super.onLocationResult(locationResult);
-                str="onLocationResult()";
                 Log.i(TAG,"onLocationResult");
                 if(mMap != null){
                     if(mCurrentLocation != null){
@@ -231,7 +241,6 @@ public class MainActivity extends AppCompatActivity
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         Log.i(TAG,"onActivityResult()");
-        str="onActivityResult()";
         switch (requestCode) {
             // Check for the integer request code originally supplied to startResolutionForResult().
             case REQUEST_CHECK_SETTINGS:
@@ -257,7 +266,6 @@ public class MainActivity extends AppCompatActivity
      */
     private void startLocationUpdates() {
         Log.i(TAG,"startLocationUpdates()");
-        str="startLocationUpdates()";
         // Begin by checking if the device has the necessary location settings.
         LocationServices.SettingsApi.checkLocationSettings(mGoogleApiClient, mLocationSettingsRequest)
                 .setResultCallback(new ResultCallback<LocationSettingsResult>() {
@@ -327,7 +335,6 @@ public class MainActivity extends AppCompatActivity
         // Within {@code onPause()}, we remove location updates. Here, we resume receiving
         // location updates if the user has requested them.
         Log.i(TAG,"onResume()");
-        str="onResume()";
         if (!checkPermissions()) {
             Log.i(TAG,"PERMISSION_GRANTED");
             mLocationPermissionGranted = true;
@@ -354,6 +361,26 @@ public class MainActivity extends AppCompatActivity
         Log.i(TAG,"onStop()");
     }
 
+    private void saveDataInSettings() {
+        SharedPreferences.Editor editor = mSettings.edit();
+        if(mMap.getCameraPosition() != null){
+            editor.putString(APP_PREFERENCES_LAT, String.valueOf(mMap.getCameraPosition().target.latitude));
+            editor.putString(APP_PREFERENCES_LNG, String.valueOf(mMap.getCameraPosition().target.longitude));
+            editor.apply();
+        }
+    }
+
+    private void getDataFromSettings() {
+        Log.i(TAG,"getDataFromSettings()");
+        if (mSettings.contains(APP_PREFERENCES_LAT) && mSettings.contains(APP_PREFERENCES_LNG)) {
+            mCameraPosition = new CameraPosition(
+                    new LatLng(Double.valueOf(mSettings.getString(APP_PREFERENCES_LAT,"")),
+                            Double.valueOf(mSettings.getString(APP_PREFERENCES_LNG, ""))),DEFAULT_ZOOM,0,0);
+            Log.i(TAG,"true");
+            Toast.makeText(this,"lat,lng="+mCameraPosition.target.toString(),Toast.LENGTH_LONG).show();
+        }
+    }
+
     /**
      * Save camera position and location.
      */
@@ -361,13 +388,13 @@ public class MainActivity extends AppCompatActivity
     protected void onSaveInstanceState(Bundle outState) {
         Log.i(TAG,"Save camera position and location.");
         if (mMap != null){
-            outState.putParcelable(KEY_CAMERA_POSITION, mMap.getCameraPosition());
             outState.putParcelable(KEY_LAST_LOCATION, mLastKnowLocation);
             outState.putParcelable(KEY_CURRENT_LOCATION, mCurrentLocation);
             outState.putBoolean(KEY_LOCATION_PERMISSION, mLocationPermissionGranted);
             outState.putBoolean(KEY_LOCATION_RESOLUTION, mLocationResolutionDenied);
-            super.onSaveInstanceState(outState);
+            saveDataInSettings();
         }
+        super.onSaveInstanceState(outState);
     }
 
     /**
@@ -397,14 +424,12 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void onMapReady(GoogleMap googleMap) {
         Log.i(TAG,"Map is ready!");
-        str="onMapReady()";
         mMap = googleMap;
         if (checkPermissions()) {
             Log.i(TAG,"PERMISSION_DENIED");
             requestPermissions();
             updateLocation();
-        }
-
+        }else updateLocation();
     }
 
     private void updateLocationUI() {
@@ -415,9 +440,11 @@ public class MainActivity extends AppCompatActivity
                         && !mLocationResolutionDenied){
                     mMap.setMyLocationEnabled(true);
                     mMap.getUiSettings().setMyLocationButtonEnabled(true);//location button is visible
+                    fab.show();
                 } else {
                     mMap.setMyLocationEnabled(false);
                     mMap.getUiSettings().setMyLocationButtonEnabled(false);//location button is not visible
+                    fab.hide();
                 }
             }catch (SecurityException e){
                 Log.w(TAG, "Exception "+e.getMessage());
@@ -431,19 +458,23 @@ public class MainActivity extends AppCompatActivity
 
     public void updateLocation() {
         //Set the map's camera position to the current location of the device.
-        Log.i(TAG, "Update Location from "+str);
+        Log.i(TAG, "Update Location");
         if (mCameraPosition != null){
-            mMap.animateCamera(CameraUpdateFactory.newCameraPosition(mCameraPosition));
+            Log.i(TAG,"mCameraPosition = "+mCameraPosition.target.longitude);
+        }else Log.i(TAG,"mCameraPosition = null");
+
+        if (mCameraPosition != null){
+            mMap.moveCamera(CameraUpdateFactory.newCameraPosition(mCameraPosition));
         } else {
             if (mCurrentLocation != null ){
-                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(
                         new LatLng(mCurrentLocation.getLatitude(),
                                 mCurrentLocation.getLongitude()),
                         DEFAULT_ZOOM));
                 mCameraPosition = mMap.getCameraPosition();
             } else {
                 if (mLastKnowLocation != null) {
-                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                    mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(
                             new LatLng(mLastKnowLocation.getLatitude(),
                                     mLastKnowLocation.getLongitude()),
                             DEFAULT_ZOOM));
@@ -570,7 +601,7 @@ public class MainActivity extends AppCompatActivity
     private void showSnackbar(final int mainTextStringId,
                               final int actionStringId,
                               View.OnClickListener listener) {
-        Snackbar.make(findViewById(android.R.id.content),
+        Snackbar.make(findViewById(R.id.cordinator),
                 getString(mainTextStringId),
                 Snackbar.LENGTH_INDEFINITE)
                 .setAction(getString(actionStringId), listener).show();

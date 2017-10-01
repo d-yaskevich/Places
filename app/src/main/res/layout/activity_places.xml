@@ -10,8 +10,14 @@
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        android:background="@color/colorPrimary"
+        android:theme="@style/MyActionBarTheme_1"
         android:title="@string/action_bar_title"/>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="5dp"
+        android:layout_below="@+id/toolbar"
+        android:background="@drawable/toolbar_dropshadow"/>
 
     <GridLayout
         android:id="@+id/gridLayout"
@@ -28,7 +34,7 @@
             android:layout_margin="3dp"
             android:gravity="center"
             app:srcCompat="@drawable/ic_nature_people_96px"
-            android:onClick=""/>
+            android:onClick="imageClick"/>
 
         <ImageView
             android:id="@+id/imageView2"
@@ -37,7 +43,8 @@
             android:contentDescription=""
             android:layout_margin="3dp"
             android:gravity="center"
-            app:srcCompat="@drawable/ic_nature_people_96px"/>
+            app:srcCompat="@drawable/ic_nature_people_96px"
+            android:onClick="imageClick"/>
 
         <ImageView
             android:id="@+id/imageView3"
@@ -46,7 +53,8 @@
             android:contentDescription=""
             android:layout_margin="3dp"
             android:gravity="center"
-            app:srcCompat="@drawable/ic_nature_people_96px"/>
+            app:srcCompat="@drawable/ic_nature_people_96px"
+            android:onClick="imageClick"/>
 
         <ImageView
             android:id="@+id/imageView4"
@@ -55,7 +63,8 @@
             android:contentDescription=""
             android:layout_margin="3dp"
             android:gravity="center"
-            app:srcCompat="@drawable/ic_nature_people_96px"/>
+            app:srcCompat="@drawable/ic_nature_people_96px"
+            android:onClick="imageClick"/>
 
     </GridLayout>
 

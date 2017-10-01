@@ -5,7 +5,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="com.example.daria.places.MainActivity">
+    tools:context="com.example.daria.places.MainActivity"
+    android:id="@+id/cordinator">
 
     <include
         android:id="@+id/include"
@@ -23,6 +24,7 @@
         app:fabSize="normal"
         app:layout_anchor="@+id/include"
         app:layout_anchorGravity="bottom|right"
-        app:srcCompat="@drawable/ic_add_48px"/>
+        app:srcCompat="@drawable/ic_add_48px"
+        android:onClick="onFabButton"/>
 
 </android.support.design.widget.CoordinatorLayout>
