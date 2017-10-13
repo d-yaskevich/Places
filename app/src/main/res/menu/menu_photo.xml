@@ -6,4 +6,9 @@
         android:icon="@drawable/ic_file_download_24dp"
         android:title="Save"
         app:showAsAction="always|collapseActionView"/>
+    <item
+        android:id="@+id/itemInfo"
+        android:icon="@drawable/ic_info_outline_black_24dp"
+        android:title="info"
+        app:showAsAction="always|collapseActionView"/>
 </menu>

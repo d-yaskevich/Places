@@ -7,14 +7,7 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
-
-    <!-- EXTERNAL_STORAGE permissions are optional for Android 6.0 onwards. -->
-    <uses-permission
-        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        android:maxSdkVersion="22"/>
-    <uses-permission
-        android:name="android.permission.READ_EXTERNAL_STORAGE"
-        android:maxSdkVersion="22"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
 
     <application
         android:allowBackup="true"
@@ -40,20 +33,17 @@
         </activity>
         <activity
             android:name=".NearbyPlaces"
-            android:theme="@style/MyTheme">
+            android:theme="@style/AppTheme">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value=".MainActivity"/>
         </activity>
         <activity
             android:name=".SettingsActivity"
-            android:theme="@style/MyTheme">
-            <meta-data
-                android:name="android.support.PARENT_ACTIVITY"
-                android:value=".NearbyPlaces"/>
+            android:theme="@style/AppTheme">
         </activity>
         <activity android:name=".PagerActivity"
-                  android:theme="@style/MyTheme">
+                  android:theme="@style/MyDarkTheme">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value=".NearbyPlaces"/>

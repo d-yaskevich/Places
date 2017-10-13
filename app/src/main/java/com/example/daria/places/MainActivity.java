@@ -24,6 +24,7 @@ import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.PendingResult;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.LocationCallback;
@@ -33,6 +34,9 @@ import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.LocationSettingsRequest;
 import com.google.android.gms.location.LocationSettingsResult;
 import com.google.android.gms.location.LocationSettingsStatusCodes;
+import com.google.android.gms.location.places.Place;
+import com.google.android.gms.location.places.PlaceLikelihood;
+import com.google.android.gms.location.places.PlaceLikelihoodBuffer;
 import com.google.android.gms.location.places.Places;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -41,18 +45,22 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 import static com.example.daria.places.R.id.map;
 
 public class MainActivity extends AppCompatActivity
         implements OnMapReadyCallback,
         GoogleApiClient.ConnectionCallbacks,
-        GoogleApiClient.OnConnectionFailedListener {
+        GoogleApiClient.OnConnectionFailedListener{
 
     private static final String TAG = "MyAwesomeApp (: ";
 
     //Constant used in requesting runtime permissions.
     private static final int REQUEST_CODE_ACCESS_FINE_LOCATION = 1;
-    private boolean mLocationPermissionGranted = false;
+    private static boolean mLocationPermissionGranted = false;
 
     //Constant used in the location settings dialog.
     private static final int REQUEST_CHECK_SETTINGS = 0x1;
@@ -77,6 +85,7 @@ public class MainActivity extends AppCompatActivity
 
     //Callback for Location events.
     private LocationCallback mLocationCallback;
+    private ResultCallback<LocationSettingsResult> mResultCallback;
 
     //Keys for storing activity state in the Bundle.
     private static final String KEY_LAST_LOCATION = "last_location";
@@ -86,9 +95,11 @@ public class MainActivity extends AppCompatActivity
 
     // Setting file name
     public static final String APP_PREFERENCES = "location_settings";
-    // Keys in setting file
+    // Keys in the Setting file
     public static final String APP_PREFERENCES_LAT = "lat";
     public static final String APP_PREFERENCES_LNG = "lng";
+    public static final String APP_PREFERENCES_ZOOM = "zoom";
+    public static final String APP_PREFERENCES_BEARING = "bearing";
 
     private SharedPreferences mSettings;
 
@@ -102,19 +113,23 @@ public class MainActivity extends AppCompatActivity
     private final LatLng mDefaultLocation = new LatLng(53.902301, 27.561903);
 
     private CameraPosition mCameraPosition;
-    private static final int DEFAULT_ZOOM = 10;
+    private static final int DEFAULT_ZOOM = 13;
 
     //Fab button for switching to child activity
     FloatingActionButton fab;
+
+    public static ArrayList<Place> places;
+    private ArrayList<Place> oldPlaces;
+    private static Location mFabLocation;
+    public final List<Integer> types = Arrays.asList(69,1013,96);
+    public static ResultCallback<PlaceLikelihoodBuffer> mPlaceLikelihoodCallback;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         getSupportActionBar().hide();
-
         setContentView(R.layout.action_button);
-
         //add fab button
         fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.hide();
@@ -124,33 +139,176 @@ public class MainActivity extends AppCompatActivity
         // Update values using data stored in the Bundle.
         updateValuesFromBundle(savedInstanceState);
 
-        // Kick off the process of building the LocationCallback, LocationRequest, and
-        // LocationSettingsRequest objects.
+        // Kick off the process of building the LocationCallback, LocationRequest,
+        // LocationSettingsRequest and LocationSettingsCallback objects.
         createLocationCallback();
         createLocationRequest();
         buildLocationSettingsRequest();
+        createLocationSettingsCallback();
 
-        mGoogleApiClient = new GoogleApiClient
-                .Builder(this)
+        mGoogleApiClient = new GoogleApiClient.Builder(this)
                 .enableAutoManage(this, this)
                 .addConnectionCallbacks(this)
                 .addApi(LocationServices.API)
-                .addApi(Places.GEO_DATA_API)
                 .addApi(Places.PLACE_DETECTION_API)
                 .build();
+        mGoogleApiClient.connect();
     }
 
-    public void onFabButton(View v) {
-        Intent intent = new Intent(MainActivity.this, NearbyPlaces.class);
-        if(mCurrentLocation != null){
-            intent.putExtra("lat", mCurrentLocation.getLatitude());
-            intent.putExtra("lng", mCurrentLocation.getLongitude());
-        } else {
-            intent.putExtra("lat", 0);
-            intent.putExtra("lng", 0);
+    @Override
+    public void onResume() {
+        super.onResume();
+        // Within {@code onPause()}, we remove location updates. Here, we resume receiving
+        // location updates if the user has requested them.
+        Log.i(TAG,"onResume()");
+        NearbyPlaces.progressStatus=0;
+        if (!checkPermissions()) {
+            Log.i(TAG,"PERMISSION_GRANTED");
+            mLocationPermissionGranted = true;
+            startLocationUpdates();
         }
-        setResult(RESULT_OK, intent);
-        startActivity(intent);
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        Log.i(TAG,"onStart()");
+        getDataFromSettings();
+        if(places != null){
+            oldPlaces = places;
+        }
+        places = new ArrayList<>();
+    }
+
+    /**
+     * Builds the map when the Google Play services client is successfully connected.
+     */
+    @Override
+    public void onConnected(@Nullable Bundle bundle) {
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+                .findFragmentById(map);
+        mapFragment.getMapAsync(this);
+    }
+
+    @Override
+    public void onConnectionSuspended(int i) {
+        Log.w(TAG, "Play services connection suspended");
+        mGoogleApiClient.connect();
+    }
+
+    @Override
+    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+        Log.d(TAG,"Play services connection failed: ConnectionResult.getErrorCode() = "
+                + connectionResult.getErrorCode());
+        Toast.makeText(this,R.string.on_connection_failed,Toast.LENGTH_LONG).show();
+    }
+
+    @Override
+    public void onMapReady(GoogleMap googleMap) {
+        Log.i(TAG,"Map is ready!");
+        mMap = googleMap;
+        if (checkPermissions()) {
+            Log.i(TAG,"PERMISSION_DENIED");
+            requestPermissions();
+            updateLocation();
+        }else updateLocation();
+    }
+
+    /**
+     * Requests location updates from the FusedLocationApi. Note: we don't call this unless location
+     * runtime permission has been granted.
+     */
+    private void startLocationUpdates() {
+        Log.i(TAG,"startLocationUpdates()");
+        // Begin by checking if the device has the necessary location settings.
+        LocationServices.SettingsApi.checkLocationSettings(mGoogleApiClient, mLocationSettingsRequest)
+                .setResultCallback(mResultCallback);
+    }
+
+    public void updateLocation() {
+        //Set the map's camera position to the current location of the device.
+        Log.i(TAG, "Update Location");
+        if (mCameraPosition != null){
+            mMap.moveCamera(CameraUpdateFactory.newCameraPosition(mCameraPosition));
+        } else {
+            if (mCurrentLocation != null ){
+                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(
+                        new LatLng(mCurrentLocation.getLatitude(),
+                                mCurrentLocation.getLongitude()),
+                        DEFAULT_ZOOM));
+                mCameraPosition = mMap.getCameraPosition();
+            } else {
+                if (mLastKnowLocation != null) {
+                    mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(
+                            new LatLng(mLastKnowLocation.getLatitude(),
+                                    mLastKnowLocation.getLongitude()),
+                            DEFAULT_ZOOM));
+                } else {
+                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(mDefaultLocation, DEFAULT_ZOOM));
+                }
+            }
+        }
+        if(mCameraPosition != null){
+            Log.e(TAG,"mCameraPosition = ["+mCameraPosition.target.latitude+","+mCameraPosition.target.longitude+"]");
+        }else Log.e(TAG,"mCameraPosition is null.");
+        if(mCurrentLocation != null){
+            mLastKnowLocation = mCurrentLocation;
+            Log.e(TAG,"mCurrent"+mCurrentLocation.toString());
+        }else Log.e(TAG,"mCurrentLocation is null.");
+        if(mLastKnowLocation != null){
+            Log.e(TAG,"mLast"+mLastKnowLocation.toString());
+        }else Log.e(TAG,"mLastKnowLocation is null.");
+        updateLocationUI();
+    }
+
+    private void updateLocationUI() {
+        if (mMap != null){
+            try{
+                if (mLocationPermissionGranted
+                        && !mLocationResolutionDenied){
+                    mMap.setMyLocationEnabled(true);
+                    mMap.getUiSettings().setMyLocationButtonEnabled(true);//location button is visible
+                    fab.show();
+                } else {
+                    mMap.setMyLocationEnabled(false);
+                    mMap.getUiSettings().setMyLocationButtonEnabled(false);//location button is not visible
+                    fab.hide();
+                }
+            }catch (SecurityException e){
+                Log.w(TAG, "Exception "+e.getMessage());
+            }
+        }else {
+            Toast.makeText(this,"Map is null",Toast.LENGTH_LONG).show();
+            Log.i(TAG, "Map is null");
+            return;
+        }
+    }
+
+    /**
+     * Save camera position and location.
+     */
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        Log.i(TAG,"Save camera position and location.");
+        if (mMap != null){
+            outState.putParcelable(KEY_LAST_LOCATION, mLastKnowLocation);
+            outState.putParcelable(KEY_CURRENT_LOCATION, mCurrentLocation);
+            outState.putBoolean(KEY_LOCATION_PERMISSION, mLocationPermissionGranted);
+            outState.putBoolean(KEY_LOCATION_RESOLUTION, mLocationResolutionDenied);
+            saveDataInSettings();
+        }
+        super.onSaveInstanceState(outState);
+    }
+
+    private void saveDataInSettings() {
+        SharedPreferences.Editor editor = mSettings.edit();
+        if(mMap.getCameraPosition() != null){
+            editor.putString(APP_PREFERENCES_LAT, String.valueOf(mMap.getCameraPosition().target.latitude));
+            editor.putString(APP_PREFERENCES_LNG, String.valueOf(mMap.getCameraPosition().target.longitude));
+            editor.putFloat(APP_PREFERENCES_ZOOM, mMap.getCameraPosition().zoom);
+            editor.putFloat(APP_PREFERENCES_BEARING, mMap.getCameraPosition().bearing);
+            editor.apply();
+        }
     }
 
     /**
@@ -176,7 +334,19 @@ public class MainActivity extends AppCompatActivity
                 mLocationResolutionDenied = savedInstanceState.getBoolean(KEY_LOCATION_RESOLUTION);
             }
         }
-        getDataFromSettings();
+    }
+
+    private void getDataFromSettings() {
+        Log.i(TAG,"getDataFromSettings()");
+        if (mSettings.contains(APP_PREFERENCES_LAT) && mSettings.contains(APP_PREFERENCES_LNG)) {
+            mCameraPosition = new CameraPosition(
+                    new LatLng(Double.valueOf(mSettings.getString(APP_PREFERENCES_LAT,"")),
+                            Double.valueOf(mSettings.getString(APP_PREFERENCES_LNG, ""))),
+                    mSettings.getFloat(APP_PREFERENCES_ZOOM,DEFAULT_ZOOM),
+                    0,
+                    mSettings.getFloat(APP_PREFERENCES_BEARING, 0));
+            Log.i(TAG,"true");
+        }
     }
 
     /**
@@ -238,6 +408,68 @@ public class MainActivity extends AppCompatActivity
         mLocationSettingsRequest = builder.build();
     }
 
+    private void createLocationSettingsCallback() {
+        mResultCallback = new ResultCallback<LocationSettingsResult>() {
+            @Override
+            public void onResult(LocationSettingsResult result) {
+                final Status status = result.getStatus();
+                switch (status.getStatusCode()) {
+                    case LocationSettingsStatusCodes.SUCCESS:
+                        // All location settings are satisfied. The client can initialize location
+                        // requests here.
+                        mLocationResolutionDenied = false;
+                        try {
+                            if (mLocationPermissionGranted){
+                                LocationServices.FusedLocationApi
+                                        .requestLocationUpdates(mGoogleApiClient, mLocationRequest,
+                                                mLocationCallback, Looper.myLooper());
+                            }
+                        }catch (SecurityException e){
+                            Log.w(TAG, "Exception: "+e.getMessage());
+                        }
+                        break;
+                    case LocationSettingsStatusCodes.RESOLUTION_REQUIRED:
+                        // Location settings are not satisfied. But could be fixed by showing the user
+                        // a dialog.
+                        try {
+                            // Show the dialog by calling startResolutionForResult(),
+                            // and check the result in onActivityResult().
+                            Log.i(TAG,"RESOLUTION_REQUIRED");
+                            if(mLocationResolutionDenied){
+                                showSnackbar(R.string.location_off_mode, R.string.settings,
+                                        new View.OnClickListener() {
+                                            @Override
+                                            public void onClick(View view) {
+                                                // Build intent that displays the App settings screen.
+                                                Intent intent = new Intent();
+                                                intent.setAction(
+                                                        Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                                                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                                startActivity(intent);
+                                            }
+                                        });
+                            } else {
+                                status.startResolutionForResult(
+                                        MainActivity.this,
+                                        REQUEST_CHECK_SETTINGS);
+                            }
+                        } catch (IntentSender.SendIntentException e) {
+                            Log.w(TAG,"Exception: "+e.getMessage().toString());
+                        }
+                        break;
+                    case LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE:
+                        // Location settings are not satisfied. However, we have no way to fix the
+                        // settings so we won't show the dialog.
+                        String errorMessage = "Location settings are inadequate, and cannot be " +
+                                "fixed here. Fix in Settings.";
+                        Log.e(TAG, errorMessage);
+                        Toast.makeText(MainActivity.this, errorMessage, Toast.LENGTH_LONG).show();
+                        break;
+                }
+            }
+        };
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         Log.i(TAG,"onActivityResult()");
@@ -258,242 +490,6 @@ public class MainActivity extends AppCompatActivity
                 }
                 break;
         }
-    }
-
-    /**
-     * Requests location updates from the FusedLocationApi. Note: we don't call this unless location
-     * runtime permission has been granted.
-     */
-    private void startLocationUpdates() {
-        Log.i(TAG,"startLocationUpdates()");
-        // Begin by checking if the device has the necessary location settings.
-        LocationServices.SettingsApi.checkLocationSettings(mGoogleApiClient, mLocationSettingsRequest)
-                .setResultCallback(new ResultCallback<LocationSettingsResult>() {
-                    @Override
-                    public void onResult(LocationSettingsResult result) {
-                        final Status status = result.getStatus();
-                        switch (status.getStatusCode()) {
-                            case LocationSettingsStatusCodes.SUCCESS:
-                                // All location settings are satisfied. The client can initialize location
-                                // requests here.
-                                mLocationResolutionDenied = false;
-                                try {
-                                    if (mLocationPermissionGranted){
-                                        LocationServices.FusedLocationApi
-                                                .requestLocationUpdates(mGoogleApiClient, mLocationRequest,
-                                                mLocationCallback, Looper.myLooper());
-                                    }
-                                }catch (SecurityException e){
-                                    Log.w(TAG, "Exception: "+e.getMessage());
-                                }
-                                break;
-                            case LocationSettingsStatusCodes.RESOLUTION_REQUIRED:
-                                // Location settings are not satisfied. But could be fixed by showing the user
-                                // a dialog.
-                                try {
-                                    // Show the dialog by calling startResolutionForResult(),
-                                    // and check the result in onActivityResult().
-                                    Log.i(TAG,"RESOLUTION_REQUIRED");
-                                    if(mLocationResolutionDenied){
-                                        showSnackbar(R.string.location_off_mode, R.string.settings,
-                                                new View.OnClickListener() {
-                                                    @Override
-                                                    public void onClick(View view) {
-                                                        // Build intent that displays the App settings screen.
-                                                        Intent intent = new Intent();
-                                                        intent.setAction(
-                                                                Settings.ACTION_LOCATION_SOURCE_SETTINGS);
-                                                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                                                        startActivity(intent);
-                                                    }
-                                                });
-                                    } else {
-                                        status.startResolutionForResult(
-                                                MainActivity.this,
-                                                REQUEST_CHECK_SETTINGS);
-                                    }
-                                } catch (IntentSender.SendIntentException e) {
-                                    Log.w(TAG,"Exception: "+e.getMessage().toString());
-                                }
-                                break;
-                            case LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE:
-                                // Location settings are not satisfied. However, we have no way to fix the
-                                // settings so we won't show the dialog.
-                                String errorMessage = "Location settings are inadequate, and cannot be " +
-                                "fixed here. Fix in Settings.";
-                                Log.e(TAG, errorMessage);
-                                Toast.makeText(MainActivity.this, errorMessage, Toast.LENGTH_LONG).show();
-                                break;
-                        }
-                    }
-                });
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        // Within {@code onPause()}, we remove location updates. Here, we resume receiving
-        // location updates if the user has requested them.
-        Log.i(TAG,"onResume()");
-        if (!checkPermissions()) {
-            Log.i(TAG,"PERMISSION_GRANTED");
-            mLocationPermissionGranted = true;
-            startLocationUpdates();
-        }
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        Log.i(TAG,"onPause()");
-    }
-
-    @Override
-    protected void onStart() {
-        super.onStart();
-        Log.i(TAG,"onStart()");
-        mGoogleApiClient.connect();
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        Log.i(TAG,"onStop()");
-    }
-
-    private void saveDataInSettings() {
-        SharedPreferences.Editor editor = mSettings.edit();
-        if(mMap.getCameraPosition() != null){
-            editor.putString(APP_PREFERENCES_LAT, String.valueOf(mMap.getCameraPosition().target.latitude));
-            editor.putString(APP_PREFERENCES_LNG, String.valueOf(mMap.getCameraPosition().target.longitude));
-            editor.apply();
-        }
-    }
-
-    private void getDataFromSettings() {
-        Log.i(TAG,"getDataFromSettings()");
-        if (mSettings.contains(APP_PREFERENCES_LAT) && mSettings.contains(APP_PREFERENCES_LNG)) {
-            mCameraPosition = new CameraPosition(
-                    new LatLng(Double.valueOf(mSettings.getString(APP_PREFERENCES_LAT,"")),
-                            Double.valueOf(mSettings.getString(APP_PREFERENCES_LNG, ""))),DEFAULT_ZOOM,0,0);
-            Log.i(TAG,"true");
-            Toast.makeText(this,"lat,lng="+mCameraPosition.target.toString(),Toast.LENGTH_LONG).show();
-        }
-    }
-
-    /**
-     * Save camera position and location.
-     */
-    @Override
-    protected void onSaveInstanceState(Bundle outState) {
-        Log.i(TAG,"Save camera position and location.");
-        if (mMap != null){
-            outState.putParcelable(KEY_LAST_LOCATION, mLastKnowLocation);
-            outState.putParcelable(KEY_CURRENT_LOCATION, mCurrentLocation);
-            outState.putBoolean(KEY_LOCATION_PERMISSION, mLocationPermissionGranted);
-            outState.putBoolean(KEY_LOCATION_RESOLUTION, mLocationResolutionDenied);
-            saveDataInSettings();
-        }
-        super.onSaveInstanceState(outState);
-    }
-
-    /**
-     * Builds the map when the Google Play services client is successfully connected.
-     */
-    @Override
-    public void onConnected(@Nullable Bundle bundle) {
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
-                .findFragmentById(map);
-        mapFragment.getMapAsync(this);
-    }
-
-    @Override
-    public void onConnectionSuspended(int i) {
-        Log.w(TAG, "Play services connection suspended");
-        Toast.makeText(this,"Play services connection suspended",Toast.LENGTH_LONG).show();
-        mGoogleApiClient.connect();
-    }
-
-    @Override
-    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
-        Log.d(TAG,"Play services connection failed: ConnectionResult.getErrorCode() = "
-                + connectionResult.getErrorCode());
-        Toast.makeText(this,"Play services connection failed!",Toast.LENGTH_LONG).show();
-    }
-
-    @Override
-    public void onMapReady(GoogleMap googleMap) {
-        Log.i(TAG,"Map is ready!");
-        mMap = googleMap;
-        if (checkPermissions()) {
-            Log.i(TAG,"PERMISSION_DENIED");
-            requestPermissions();
-            updateLocation();
-        }else updateLocation();
-    }
-
-    private void updateLocationUI() {
-        Log.i(TAG, "Update Location UI");
-        if (mMap != null){
-            try{
-                if (mLocationPermissionGranted
-                        && !mLocationResolutionDenied){
-                    mMap.setMyLocationEnabled(true);
-                    mMap.getUiSettings().setMyLocationButtonEnabled(true);//location button is visible
-                    fab.show();
-                } else {
-                    mMap.setMyLocationEnabled(false);
-                    mMap.getUiSettings().setMyLocationButtonEnabled(false);//location button is not visible
-                    fab.hide();
-                }
-            }catch (SecurityException e){
-                Log.w(TAG, "Exception "+e.getMessage());
-            }
-        }else {
-            Toast.makeText(this,"Map is null",Toast.LENGTH_LONG).show();
-            Log.i(TAG, "Map is null");
-            return;
-        }
-    }
-
-    public void updateLocation() {
-        //Set the map's camera position to the current location of the device.
-        Log.i(TAG, "Update Location");
-        if (mCameraPosition != null){
-            Log.i(TAG,"mCameraPosition = "+mCameraPosition.target.longitude);
-        }else Log.i(TAG,"mCameraPosition = null");
-
-        if (mCameraPosition != null){
-            mMap.moveCamera(CameraUpdateFactory.newCameraPosition(mCameraPosition));
-        } else {
-            if (mCurrentLocation != null ){
-                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(
-                        new LatLng(mCurrentLocation.getLatitude(),
-                                mCurrentLocation.getLongitude()),
-                        DEFAULT_ZOOM));
-                mCameraPosition = mMap.getCameraPosition();
-            } else {
-                if (mLastKnowLocation != null) {
-                    mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(
-                            new LatLng(mLastKnowLocation.getLatitude(),
-                                    mLastKnowLocation.getLongitude()),
-                            DEFAULT_ZOOM));
-                } else {
-                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(mDefaultLocation, DEFAULT_ZOOM));
-                }
-            }
-        }
-        if(mCameraPosition != null){
-            Log.e(TAG,"mCameraPosition = ["+mCameraPosition.target.latitude+","+mCameraPosition.target.longitude+"]");
-        }else Log.e(TAG,"mCameraPosition is null.");
-        if(mCurrentLocation != null){
-            mLastKnowLocation = mCurrentLocation;
-            Log.e(TAG,"mCurrent"+mCurrentLocation.toString());
-        }else Log.e(TAG,"mCurrentLocation is null.");
-        if(mLastKnowLocation != null){
-            Log.e(TAG,"mLast"+mLastKnowLocation.toString());
-        }else Log.e(TAG,"mLastKnowLocation is null.");
-        updateLocationUI();
     }
 
     /**
@@ -605,5 +601,52 @@ public class MainActivity extends AppCompatActivity
                 getString(mainTextStringId),
                 Snackbar.LENGTH_INDEFINITE)
                 .setAction(getString(actionStringId), listener).show();
+    }
+
+    public void onFabButton(View v) {
+        if(mFabLocation != null &&
+                mFabLocation.getLatitude()==mCurrentLocation.getLatitude() &&
+                mFabLocation.getLongitude()==mCurrentLocation.getLongitude()){
+            places = oldPlaces;
+            Intent intent = new Intent(MainActivity.this, NearbyPlaces.class);
+            startActivity(intent);
+        }else {
+            mFabLocation = mCurrentLocation;
+            createPlaceLikelihoodCallback();
+            if(!getCurrentPlace()){
+                Log.w(TAG, "Request permission. Don't get current place.");
+                Toast.makeText(this,R.string.permission_denied_explanation,Toast.LENGTH_LONG).show();
+            }
+        }
+    }
+
+    private void createPlaceLikelihoodCallback() {
+        mPlaceLikelihoodCallback = new ResultCallback<PlaceLikelihoodBuffer>() {
+            @Override
+            public void onResult(PlaceLikelihoodBuffer likelyPlaces) {
+                for (PlaceLikelihood placeLikelihood : likelyPlaces) {
+                    Place place = placeLikelihood.getPlace();
+                    places.add(place.freeze());
+                }
+                Log.i(TAG,"_____places size = "+ places.size());
+                likelyPlaces.release();
+                Intent intent = new Intent(MainActivity.this, NearbyPlaces.class);
+                startActivity(intent);
+            }
+        };
+    }
+
+    private boolean getCurrentPlace() {
+        try{
+            if (mLocationPermissionGranted){
+                PendingResult<PlaceLikelihoodBuffer> result = Places.PlaceDetectionApi
+                        .getCurrentPlace(mGoogleApiClient, null);
+                result.setResultCallback(mPlaceLikelihoodCallback);
+                return true;
+            }else return false;
+        }catch (SecurityException e){
+            Log.w(TAG, "Exception: "+e.getMessage());
+            return false;
+        }
     }
 }

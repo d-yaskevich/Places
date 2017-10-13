@@ -3,7 +3,6 @@ package com.example.daria.places;
 import android.os.Bundle;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
 
 public class SettingsActivity extends AppCompatActivity {
 
@@ -14,8 +13,6 @@ public class SettingsActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_settings);
 
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbarSettings);
-        setSupportActionBar(toolbar);
         ActionBar ab = getSupportActionBar();
         ab.setTitle(R.string.title_settings);
 

@@ -3,6 +3,13 @@
     <string name="action_bar_title">Nearby places</string>
     <string name="google_maps_key">AIzaSyCbkaGIrcv292nKS1cN1Z-FV9pZBkLHOZ8</string>
     <string name="of">of</string>
+    <string name="on_connection_failed">Play services connection failed!</string>
+    <string name="on_connection_suspended">Play services connection suspended</string>
+    <string name="not_photos_place">Could not find photo of nearby places. Try to change your location.</string>
+    <!--PLACE INFO DIALOG-->
+    <string name="dialog_title">Info about place</string>
+    <string name="ok">OK</string>
+    <!---->
 
     <!--LOCATION-->
     <string name="no_location_detected">
@@ -18,27 +25,31 @@
     <string name="location_off_mode">"The device location can't be determined.
         Check the location mode"</string>
     <string name="settings">Settings</string>
+
+    <string name="dialog_perm_title">Permission required</string>
+    <string name="permission_storage_denied">Can\'t save photo when permission is denied.</string>
+    <string name="cancel">Cancel</string>
     <!---->
 
     <!--SETTING-->
     <string name="title_settings">Settings</string>
 
-    <string name="title_category_radius">Radius</string>
-    <string name="title_radius">Search radius</string>
-    <string name="summary_radius">Select the maximum radius value</string>
+    <string name="title_category_radius">Photo</string>
+    <string name="title_radius">Maximum number</string>
+    <string name="summary_radius">Select the maximum number</string>
 
     <string-array name="listArray">
-        <item>1 km</item>
-        <item>5 km</item>
-        <item>10 km</item>
-        <item>50 km</item>
+        <item>5</item>
+        <item>10</item>
+        <item>25</item>
+        <item>50</item>
     </string-array>
 
     <string-array name="listValues">
-        <item>1000</item>
-        <item>5000</item>
-        <item>10000</item>
-        <item>50000</item>
+        <item>5</item>
+        <item>10</item>
+        <item>25</item>
+        <item>50</item>
     </string-array>
 
     <string name="title_other_settings">Other settings</string>

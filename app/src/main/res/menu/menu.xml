@@ -5,5 +5,5 @@
         android:id="@+id/itemSettings"
         android:icon="@drawable/ic_settings_black_24dp"
         android:title="Setting"
-        app:showAsAction="always"/>
+        app:showAsAction="always|collapseActionView"/>
 </menu>

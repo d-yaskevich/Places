@@ -20,8 +20,8 @@ public class SettingsFragment extends PreferenceFragment
         super.onCreate(savedInstanceState);
         addPreferencesFromResource(R.xml.settings);
         setRetainInstance(true);
-        //Change value "Search radius"
-        radius = (ListPreference)this.findPreference("max_radius");
+        //Change value "Search radius" in summary
+        radius = (ListPreference)this.findPreference("max_count");
         radius.setSummary(radius.getEntry());
         radius.setOnPreferenceChangeListener(this);
     }

@@ -9,22 +9,11 @@
         <item name="android:textColorPrimary">@color/colorPrimaryText</item>
     </style>
 
-    <style name="MyTheme" parent="Theme.AppCompat.Light.NoActionBar">
-        <!-- Customize your theme here. -->
-        <item name="colorPrimary">@color/colorPrimary</item>
-        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+    <style name="MyDarkTheme" parent="Theme.AppCompat">
+        <item name="colorPrimary">@android:color/transparent</item>
+        <item name="windowActionBarOverlay">true</item>
         <item name="colorAccent">@color/colorAccent</item>
-        <item name="android:textColorPrimary">@color/colorPrimaryText</item>
+        <item name="android:textColorPrimary">@color/colorPrimaryDark</item>
+        <item name="subtitleTextColor">@color/colorPrimaryDark</item>
     </style>
-
-    <style name="MyActionBarTheme_1" parent="ThemeOverlay.AppCompat.Dark.ActionBar">
-        <item name="android:background">@color/colorPrimary</item>
-        <item name="android:textColorPrimary">@color/colorPrimaryText</item>
-    </style>
-
-    <style name="MyActionBarTheme_2" parent="ThemeOverlay.AppCompat.ActionBar">
-        <item name="android:windowActionBarOverlay">true</item>
-        <item name="android:textColorPrimary">@color/colorPrimaryText</item>
-    </style>
-
 </resources>

@@ -3,10 +3,18 @@
     <string name="action_bar_title">Места поблизости</string>
     <string name="google_maps_key">AIzaSyCbkaGIrcv292nKS1cN1Z-FV9pZBkLHOZ8</string>
     <string name="of">из</string>
+    <string name="on_connection_failed">"Не удалось подключиться к Google сервисам!"</string>
+    <string name="on_connection_suspended">"Соединение с Google сервисами приостановлено"</string>
+    <string name="not_photos_place">Не удалось найти фото мест поблизости. Измените Ваше местоположение и попробуйте снова</string>
+    <!--PLACE INFO DIALOG-->
+    <string name="dialog_title">Информация о месте</string>
+    <string name="ok">ОК</string>
+    <!---->
 
     <!--LOCATION-->
     <string name="no_location_detected">
-        Включите GPS, чтобы найти текущее местоположение. Нажмите «ВКЛ», чтобы перейти к настройкам служб определения местоположения.
+        Включите GPS, чтобы найти текущее местоположение.
+        Нажмите «ВКЛ», чтобы перейти к настройкам служб определения местоположения.
     </string>
     <string name="on">ВКЛ</string>
     <!---->
@@ -14,29 +22,33 @@
     <!--PERMISSION-->
     <string name="permission_rationale">Для основных функций требуется разрешение на определение местоположения.</string>
     <string name="permission_denied_explanation">Разрешение было отклонено. Оно необходимо для полной функциональности приложения.</string>
-    <string name="location_off_mode">Местоположение устройства не может быть определено. Проверьте настройкам служб определения местоположения.</string>
+    <string name="location_off_mode">Местоположение устройства не может быть определено.</string>
     <string name="settings">Настройки</string>
+
+    <string name="dialog_perm_title">Требуется разрешение</string>
+    <string name="permission_storage_denied">Невозможно сохранить фото, когда разрешение отклонено. Перейдите в настройки для изменения.</string>
+    <string name="cancel">Отмена</string>
     <!---->
 
     <!--SETTING-->
     <string name="title_settings">Настройки</string>
 
-    <string name="title_category_radius">Радиус</string>
-    <string name="title_radius">Радиус поиска</string>
-    <string name="summary_radius">Выберите максимальный радиус поиска</string>
+    <string name="title_category_radius">Фото</string>
+    <string name="title_radius">Максимальное количество</string>
+    <string name="summary_radius">Выберите максимальное количество</string>
 
     <string-array name="listArray">
-        <item>1 км</item>
-        <item>5 км</item>
-        <item>10 км</item>
-        <item>50 км</item>
+        <item>5</item>
+        <item>10</item>
+        <item>25</item>
+        <item>50</item>
     </string-array>
 
     <string-array name="listValues">
-        <item>1000</item>
-        <item>5000</item>
-        <item>10000</item>
-        <item>50000</item>
+        <item>5</item>
+        <item>10</item>
+        <item>25</item>
+        <item>50</item>
     </string-array>
 
     <string name="title_other_settings">Другие настройки</string>

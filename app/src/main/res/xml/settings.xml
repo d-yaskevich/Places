@@ -7,10 +7,10 @@
         android:orderingFromXml="false"
         android:title="@string/title_category_radius">
         <ListPreference
-            android:defaultValue="5000"
+            android:defaultValue="25"
             android:entries="@array/listArray"
             android:entryValues="@array/listValues"
-            android:key="max_radius"
+            android:key="max_count"
             android:title="@string/title_radius"/>
     </PreferenceCategory>
 
